@@ -1,0 +1,1226 @@
+\documentclass[11pt]{book}		% drafthead style seems not to work w\book
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{color}
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{\today}
+\setlength{\oddsidemargin}{0.50in}	% Note binding-side margin is wider,
+\setlength{\evensidemargin}{0.00in}	% unlike Lamport's defaults
+\setlength{\topmargin}{0.0in}
+\setlength{\textheight}{8.0in}
+\setlength{\textwidth}{6.0in}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.5cm}
+
+
+
+\title{CLINICAL NEUTRON THERAPY SYSTEM\\
+	Control System Specification 1.0\\[1.0cm]}
+%         Beam Diagnostics and Status Display \\[1.0cm]}
+%        Includes Operator Interface Overview, Status Terminal, Operatons Terminal, Equipment Control Overview, Magnet System Control, Extraction System Control, Beam Diagnostics System Control, Safety System, Control System\\[1.0cm]}
+
+
+\author{Robert Emery\\
+	Ruedi Risler\\
+	Dave Reid \\
+	Mat Hicks \\
+        Jonathan Jacky}
+%	\\ 
+%	Jonathan Unger \\
+%	Stan Brossard \\ [0.5cm]
+%	Radiation Oncology Department \\
+%	University of Washington\\
+%	Seattle, WA  98195 \\[0.5cm]
+%	Technical Report 92-05-01
+
+\date{\today}
+
+\begin{document}
+
+
+
+
+
+
+
+
+
+\chapter{SWM System Control Testing}
+
+The Switching Magnet Power Supply (PSSWM) delivers up to 60A A and 50 V to produce a magnetic field that transports the beam to 1 of 3 beamlines (A, B and C). The power supply is unipolar, but has relays on the ouput that allow for bipolar operation. The PSSWM operates in a current controlled mode with a minimum 12 bit I/O resolution, an output reproducibility of $\pm$ $5$ $\times$ $10^{-6}$ A and a longterm output stability of $\pm$ $2$ $\times$ $10^{-5}$ over 24 hours. The PSSWM is made by Danfysik. 
+
+\subsection{State Controls} \label{sect:cyc-equip-ctl-beamline-swm-state-controls}
+(See section \ref{sect:cyc-equip-ctl-definitions} for control definitions not described below)
+
+\begin{enumerate}
+
+ \item (ON,OFF)
+
+\color{red}
+1) Press the On button in the operations console. Observe the following: 
+	Does the PS come on? 
+	Does SWM:On:Status go from zero to 1 when you do this? 
+	Does SWM:Condition:Initializing:Status get set to 1 then 0?
+	Does SWM:Reset:Interlocks:Write go to 1, then 0 again?
+
+2) Set SWM:CommError:Status and SWM:HardwareError:Status to false, then turn on and see if this clears.
+
+3) Set PSET to 40.0 A for SWM. Turn the PS off, and see if the "SWM:Curr:Read" goes to $<$ 10A before "SWM:On:Status" goes to zero. While this occurs, SWM:Condition:ShuttingDown:Status should go to 1 temporarily. Then, turn on the PS back on, and ensure that "SWM:Curr:Set" returns to 40.0 A.
+
+4) Does pressing the Off button at the operations console turn off the PS? When you press off, does the "Shutting Down" light flash in both the operations and status display?
+
+5) On the Operations Console, and Status display, observe that PREAD says zero for SWM when the PS is off.
+
+6) Place the device in local mode, and attempt to turn on the PS. You shouldn't be able to do this.
+
+7) When you turn on the device locally, make sure SWM:Condition:Initializing:Status gets set to 1 then 0.
+
+
+\color{black}
+
+
+\item PSSWM Polarity (Right,Left) PSET (PSSWM must be off before polarity change command may be issued)
+
+
+\color{red}
+
+1) With the SWM off and in the Right Polarity state, press Left Polarity in the operations console. Observe that "SWM:Polarity:Left:Request" changes from 0 to 1, then back to 0. Observe that the Polarity state changes from Right to left on the status display, and on the actual PS. Observe that a transition appears on status display?? Ensure that the appropriate message is written out at the operations console. Now, go back to Right Polarity state, and observe all of the same things. Also try left-left and right-right.
+
+2) With the SWM on and PSET=0, try and change the polarity. Observe that the polarity doesn't change, and that a message pops up on the operations console telling you that the polarity cannot be changed while the swm is on. Also verify that "SWM:Polarity:Left:Request" goes from 0 to 1 again. Try this going from both left to right, and right to left. Also try Left - Left, and Right- Right.
+
+
+\color{black}
+
+
+\item Ramp
+
+\color{red}
+
+1) If the SWM on and PSET=35, press the ramp button and observe that the current ramps up to 60A, holds it there for 60 seconds, then ramps it back down to 10A. Observe SWM:Condition:Ramping:Status change from 0 to 1, then back to 0 at the end. Observe that a Ramping message appears on status display. Observe SWM Ramp Complete message on CCC.
+
+2) With SWM Off, hit the ramp button and observe that ramping doesn't happen and that the appropriate message is output on the CCC. Do the same thing with the RF on (no cathode current), and with SWM:Condition:ShuttindDown:Status set to 1.
+
+3) Do a ramp again, but hit the cancel button in the operations console. Verify that the ramp cancel, and returns to the original PSET. Verify that a Ramp canceled message pops up in the CCC.
+
+\color{black}
+
+\item Cancel Ramp
+
+
+\color{red}
+
+Testing in Ramp.
+
+
+\color{black}
+
+
+ \item Initialize
+
+\color{red}
+
+Press the Initialize button in the operations console and observe the following:
+	Does the PV SWM:Condition:Initializing:Status go from 0 to 1, then back to 0 during this process? 
+	Ensure that it flashes "Initializing" in Yellow on the operations and status display screen. 
+
+Try setting Set SWM:CommError:Status and SWM:HardwareError:Status to false, then press Initialize and see if they go back to true.
+With the RF on and 0 cathode current, and verify that you cannot press the Initialize button. Then type caput SWM:Init:Curr:String.PROC 1 and verify the the PS does not initialize (you should see a message ''can't initialize, beam on'' or something like that.
+
+\color{black}
+
+
+ \item Reset (Reset is accomplished by sending OFF command to power supply)
+
+\color{red}
+
+With the SWM Off and in remote mode, turn off the cooling water. Verify that Device Interlock shows up in ops dipslay, and that he status display terminal shows the two cooilng interlcoks. Try turning on the SWM, and verify that you are prevented from doing so, and the appropriate message (the 2 cooing interlocks) appears in the message board. Try turning the PSSWM on locally, and verify that it won't go on. Then turn it back on and observe that the magnet and PS cooling interlocks still exist. Then, press the Reset button on the operations console, and observe the interlocks clear on both screens, and that you can now turn on the PSSWM.
+
+\color{black}
+
+\subsubsection{On/Off} \label{sect:cyc-equip-ctl-beamline-swm-state-controls-on-off}
+
+The PSSWM is required to be on when in the Standby 2 state, with any beamline other then Z selected.  When the Z line is selected, the PSWM must be off. The PSSWM is turned off when the system is commanded to the Standby 1 state. The PSSWM may also be turned on or off via the operations console controls.
+
+
+
+\color{red}
+
+Tested in Beamline Section.
+
+\color{black}
+
+
+
+\subsubsection{Ramp} \label{sect:cyc-equip-ctl-beamline-swm-state-controls-ramp}
+
+A command to Ramp will ramp the current output PSET to 60.0 A and remain there for 1 minute.  The ramp action must finish within 3 minutes or a timeout will occur.
+
+
+\color{red}
+
+Tested in State Controls Ramp.
+
+\color{black}
+
+
+\subsubsection{Polarity} \label{sect:cyc-equip-ctl-beamline-swm-state-controls-polarity}
+
+The Left Polarity state, also known as Positive Polarity, indicates the Danfysik supply has a standard, non-inverted output. The Right Polarity state, also known as Negative Polarity, indicates the Danfysik supply has an inverted output. Beamline A requires a polarity of left while B, and C require a polarity of right.  While the polarity in the Z line doesn't effect the beam because the PSSWM is off, a right polarity will initialize a ramping sequence.
+
+\color{red}
+
+Tested in State Controls Polarity, and below in Beamline Selection.
+
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Beamline Selection} \label{sect:cyc-equip-ctl-beamline-swm-state-controls-polarity}
+
+If the sytem is in the Standby 2 state and line A, B or C are selected, the correct Polarity state will be set, and the PSSWM will be turned on.
+
+If the system is in the Standby 2 state and the Z line is selected, the PS will be turned off if in the Left Polarity state, and ramped then turned off if in the Right Polarity state.
+
+If no line is selected, no action with the SWM will be taken.
+
+For Lines A, B and C, there exists special values of PSET, PLOW, PHIGH, PDIFF, and PSEN. These values are loaded once upon selection of a beamline. If a bealine is selected and the SWM PSET, PLOW, PHIGH, PDIFF or PSEN are changed by the operator, the line specific values will be updated in case the operator desires to save them, or switch lines and then return.
+
+\color{red}
+
+Here are the things that need to be tested once in SB2:
+
+Go to SB2. Do all of the following:
+
+1) Select line A (test and treat for 1-4), with the SWM Off, and in polarity state right. Verify that the polarity state gets flipped, the SWM gets turned back on, and the line a swm setting gets loaded. Also vary the pset, pdiff, psen, etc, and verify that they update.
+
+2) Select line A with the swm on and in the correct polarity state. verify that nothing happens, except the current gets loaded.
+
+3) Select line A, with the SWM On and in the right polarity state. Verify that the PS gets turned off, polarity flipped, then turned back on, and the correct current settings loaded.
+
+4) Not necessary. Originally this checked the on/off.
+
+5) Do the same thing as 1, 2, 3 and 4, but now with line B and left instead of right.
+
+6) Do the same thing as 5, but now with Line C.
+
+7) With the SWM Off, and polarity state left, select line Z. Verify that nothing happens.
+
+8) With the SWM On, and polarity state left, select line Z. Verify that the SWM is turned off.
+
+9) With the SWM off, and polarity state right, select line Z and verify that the SWM polarity is flipped, then turned on, ramped, and turned off again.
+
+10) With the SWM On and the polarity state right, select line Z and verify that the SWM is turned off, polarity is flipped, turned back on, then ramped, and turned off.
+
+11) With line z selected and all particle beam interlocks okay, verify that turning on the swm will kill the PV SWM:SubsystemOKSB2:Status (take it from 1 to 0).
+
+\color{black}
+
+\subsubsection{Standby 1 to Standby 2 Transition}
+
+When the system is commanded to transition to the Standby 2 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby}, the appropriate action will be taken as described in the Beamline Selection section above.
+
+\color{red}
+
+This is tested above in Beamline Selection
+
+\color{black}
+
+\subsubsection{Standby 2 to Standby 1 Transition}
+
+When the system is commanded to transition to the Standby 2 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby}, the PSSWM is turned off.
+
+\color{red}
+
+Press SB1 button while in SB2 and verify that the SWM is turned off.
+
+\color{black}
+
+
+\subsection{State Monitors} \label{sect:cyc-equip-ctl-beamline-gcc-state-monitors}
+(See section \ref{sect:cyc-equip-ctl-definitions} for state definitions not described below)
+
+\begin{enumerate}
+
+ \item SWM Initializing
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item SWM (ON,OFF)
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item SWM Shutting Down
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item SWM Local (Local includes front panel analog control of output current)
+
+\color{red}
+Press the Local button the PS, and see if the "Local" buttons lights up in both the operations terminal and status terminal.
+\color{black}
+
+ \item SWM Ramping
+
+\color{red}
+Already tested above.
+\color{black}
+
+ \item SWM Ramp Failed
+
+\color{red}
+Start a ramp. While the ramping is going on, change SWM:Curr:Set to a number not 60, say 15. Let it sit there, and after 180 seconds, the ramping fail should happen on the status display. The ramping status should go away, and you should be able to press acknowledge and clear the ramping fail window on status display.
+\color{black}
+
+ \item SWM Polarity (Right,Left)
+
+\color{red}
+Already tested above.
+\color{black}
+
+ \item SWM Control Power Off
+
+\color{red}
+Turn off the control power on the psswm, and verify that the warning light comes up on status display, and that Device Interlock shows on ops display.
+\color{black}
+
+ \item PSSWM Transistor Failure
+
+\color{red}
+This is a warning light to let you know if $>$ 1 percent of the transistors have failed. It doesn't throw any interlocks, and I don't know how to test that this signal will appears on the status display screen.
+\color{black}
+
+ \item SWM Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+SWM Device Interlocks:
+(Occurrence of interlock will turn off the BMG PS and not allow it to be turned on unless otherwise noted)
+
+\begin{enumerate}
+ \item Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+With the PS on, and PSET=0, turn off the water. Verify that the PS turns off, and you can't turn it back on.
+\color{black}
+
+ \item Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+With the PS on, and PSET=0, turn off the water. Verify that the PS turns off and you can't turn it back on.
+\color{black}
+
+ \item Power Failure - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock, b/c I have no way of generating it. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\item Overload - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock b/c I have no way of generating. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+SWM Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item PSSWM Initializing - Non-latching
+
+\color{red}
+Write SWM:Condition:Initializing:Status from 0 to 1, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0.
+
+\color{black}
+
+ \item PSSWM Shutting Down - Non-latching
+
+\color{red}
+Write SWM:Condition:ShuttingDown:Status to 1, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+ \item PSSWM Ramping - Non-latching
+
+\color{red}
+Write SWM:Condition:Ramping:Status to 1, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+
+ \item PSSWM Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+With PSET=25, set PHIGH to 10, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0. Verify the appropriate changes in the PREAD display in operations console and status display.
+\color{black}
+
+ \item PSSWM Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+With PSET=25, set PLOW to 30, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0.Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item PSSWM Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+With PSET=25, set PDIFF to 0, and verify that SWM:SubsystemOKSB2:Status goes from 1 to 0 (may have to wait). Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item PSSWM Communication Fault - Initialize to remove latch
+
+\color{red}
+Write SWM:CommError:Status from 0 to 1. Does SWM:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console and status display? You could also start in an OK state, and unplug the ethernet from the SWM acromag. I didn't try this. This should register a commerror, amung things.
+\color{black}
+
+
+ \item PSSWM Watchdog - Initialize to remove latch
+
+\color{red}
+
+The following doesn't actually work. I think the PS somehow re-initializes, or turns on if it is on, and you reboot the ioc:
+
+You cannot stop the heartbeat. What you can do, is restart the IOC. THe HB will start, but the reset commmand needs to be thrown to start the Watchdog OK in the PLC. So the test is restart the HB. Verify the Watchdog error on the ops and status display. After setting PSET, PLOW, and PHIGH to acceptable values, verify that SWM:SubsystemOKSB2:Status is still 0. Then press initialize, and verify that the watchdog error goes away on ops and status, and that SWM:SubsystemOKSB2:Status changes from 0 to 1.
+\color{black}
+
+ \item PSSWM Hardware Error - Initialize to remove latch
+
+\color{red}
+Write SWM:HardwareError:Status from 0 to 1. Does SWM:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console (Interlock) and status display (Aromag Fault or something like that)?
+\color{black}
+
+ \item PSSWM Polarity Fault - Non-latching
+
+\color{red}
+With all the particle beam interocks working, you need to first disable the record that handles beamline selections. Then, with all the swm particle beam interlocks working, turn off the swm, change the polarity, and see if this disables SWM:SubsystemOKSB2:Status. For line a, is should be right to disable. FOr lines B, and C, it should be left to disable.
+\color{black}
+
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+If used, loss of control of the PSBMG would result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the PSBMG.  If the output current is out of tolerance or in question, as described in section \ref{sect:cyc-equip-ctl-beamline-bmg-state-monitors-beam-interlocks}, the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\color{red}
+
+Bring up everything into SB2, and select beamline A Test. Make sure everything is okay, so that you can run beam down the A line. Check that all the appropriate buttons are lit up, particularly the ``FC1 to Target'' button light should be on, and the FC1 ``Interlock'' light should be off. With the RF On, and FC1 Open, but NO CATHODE CURRENT, change PLOW below PSET and observe that the RF shuts off, and FC1 gets put in. Then observe the ``Interlock'' light is on next to FC1, and that the light on the ``FC1 to Tartget'' button turns off. Try opening FC1 and verify that it won't open. Turn the RF back on, with FC1 in. With the RF on, verify that you still cannot open FC1. Then change PLOW for the SWM back to the appropriate value and verify that the FC1 ``Interlock'' light goes away, the ``FC1 to Target'' button light turns on, and now you can open the FC1 with the RF On.
+
+Do this identical procedure for beamline A Treat, beamline B both test and treat mode, and Beamline C.
+
+\color{black}
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item PSSWM Current PSET  n.nn A
+
+\color{red}
+Set a value for PSET, and verify that it appears on the PS, in operations console and status display, and on PREAD (in operations console and status display).
+\color{black}
+
+ \item PSSWM Current PLOW  n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item PSSWM Current PHIGH n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item PSSWM Current PDiff n.n A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item PSSWM Current PSEN  n
+
+\color{red}
+Change PSEN from 1 to 10, and verify that the tuning knob sensivity has changed in the tuning module. Here, you should also check that you can drag SWM into the tuning module, and control the PSET parameter with the knob. Move the knob, and observe the pset value on status display.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item PSSWM Current MinLimit = 0 A
+
+\color{red}
+Set PSET to -1, and verify that the PV SWM:Curr:SetDevice only goes to 0.
+\color{black}
+
+ \item PSSWM Current MaxLimit = 60 A
+
+\color{red}
+Set PSET to 65, and verify that the PV SWM:Curr:SetDevice only goes to 60. Quickly return PSET to 0.
+\color{black}
+
+ \item PSSWM Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+With PSET=10, and PLOW set to 9.1, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then set PLOW to 8.9, and verify that everything goes back to normal.
+\color{black}
+
+ \item PSSWM Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+With PSET=10, and PHIGH set to 10.9, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then change PHIGH to 11.1 and verify that everything goes back to normal.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item PSSWM Current PSET  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSSWM Current PLOW  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSSWM Current PHIGH n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSSWM Current PDiff n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSSWM Current PSEN  n
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The Switching Magnet power supply is a commercial Danfysik DC supply.  Discrete state control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring is done by the control system using 0-5 VDC analog signals via Acromag ADC/DAC's located in the PSSWM.
+
+\color{black}
+
+
+
+
+
+
+\chapter{SWM Operations Console Testing}
+
+\paragraph{Draggable Objects}
+
+\begin{enumerate}
+ \item ``SWM'' label. - Will assign BMG output current parameter to Tuning Module or open BMG Display in Device Operations region.
+
+\color{red}
+Already tested in Analog Control Parameters.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+ \item SWM (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item SWM Initialize (Button is disabled if device is off or if RF in High Power mode)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item SWM (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item SWM Local
+
+\color{red}
+Already checked on State Monotors of System Control Testing.
+\color{black}
+
+ \item SWM Initializing - Flashing Yellow
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item SWM Shutting Down - Flashing Yellow
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item SWM Device Interlock - Red
+
+\color{red}
+Already checked on Device Interlocks Section of System Control Testing.
+\color{black}
+
+ \item SWM Interlock - Fuchsia - Communication, Hardware, or Watchdog Error
+
+\color{red}
+Already checked on Particle Beam Interlocks of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Switching Magnet (SWM) Device Operations}
+
+\paragraph{Title} \label{sect:cyc-op-interface-ops-terminal-device-ops-gcc-title}
+
+The title of the system will be SWM.  The color of the title bar will be teal.
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+ \item (Ramp,Cancel Ramping) (Ramp button is disabled if RF is on in High Power mode or Main Coil is not On or is Shutting Down.  Cancel Ramp button is disabled if not ramping)
+ \item SWM Polarity (+,-) (Is disabled if SWM is On.)
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item SWM Polarity (+,-)
+\end{enumerate}
+
+\paragraph{Analog Control Parameters}
+
+\begin{enumerate}
+ \item SWM Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{Analog Display Parameters}
+
+\begin{enumerate}
+ \item SWM Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PREAD  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+
+
+
+
+\chapter{BMG Status Display Testing}
+
+The Beamline to FC1 system includes the xxxx.
+
+The Beamline FC1 to Target status screen pops up in the status terminal when the button "Beam Line FC1 to Target" is pushed on the CCC. The status screen is tabbed display such that the status of FC1-to-FC3, FC3-to-Target, Beamline B, and Beamline C may be displayed.  The switching magnet is shown for all 4 states, while the bending magnet is shown for only Beamline B and Beamline C.  When Beamline A is selected by the operator on the CCC, the tab for FC1-to-FC3 is selected. When Beamline B or C is selected, the corresponding tab in status dispay is selected. The user always has the ability to select the desired tab with the mouse pointer.
+
+\subsubsection{Title}\label{sect:cyc-op-interface-status-terminal-display-contents-beamline-target-title}
+
+The title of the display is "Beamline Control: FC1 to Target".  The color of the title bar is forest green.
+
+\subsection{State Monitors}
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A (ON,OFF)
+ \item X2A/X3A/Y2A/Y3A Local
+ \item X2A/X3A/Y2A/Y3A Initializing
+ \item X2A/X3A/Y2A/Y3A Shutting Down
+ \item SM23A +24 V Control Voltage Low
+ \item X2A Circuit Resistance out of Tolerance
+ \item X3A Circuit Resistance out of Tolerance
+ \item Y2A Circuit Resistance out of Tolerance
+ \item Y3A Circuit Resistance out of Tolerance
+ \item GCC (ON,OFF)
+ \item GCC Local
+ \item GCC Initializing
+ \item GCC Shutting Down
+ \item GCC +24 V Control Voltage Low
+ \item GCC Circuit Resistance out of Tolerance
+ \item BMG (ON,OFF)
+ \item BMG Local
+ \item BMG Initializing
+ \item BMG Shutting Down
+ \item BMG +24 V Control Voltage Low
+ \item BMG Circuit Resistance out of Tolerance
+ \item BMG Transistor Failure
+ \item SWM (ON,OFF)
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM Local
+
+\color{red}
+Already checked on State Monitor section of System Control Testing.
+\color{black}
+
+ \item SWM Initializing
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM Shutting Down
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM Ramping
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM Ramp Failed (displayed within box which may be clicked to be dismissed.  Attempting to re-ramp will also dismiss box)
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM Polarity (+,-) PSET and PREAD
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item SWM +24 V Control Voltage Low
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+\item SWM Transistor Failure
+
+\color{red}
+I don't know of a way to get this indicator to come on.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+Device Interlocks:
+(Occurence of these will turn off the corresponding device and prevent it from being turned back on until addressed)
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A Ground Fault - Reset Locally to Remove latch - No Remote Reset
+ \item X2A/Y2A Over Temperature - Reset to Remove latch
+ \item X3A/Y3A Over Temperature - Reset to Remove latch
+ \item SWM Magnet Cooling - Reset to Remove latch
+ \item GCC Ground Fault - Reset Locally to Remove latch - No Remote Reset
+ \item GCC Flow and Temperature - Reset to Remove latch
+ \item BMG Cooling Failure MPS - Reset to Remove latch
+ \item BMG Cooling Failure Magnet - Reset to Remove latch
+ \item BMG Power Failure - Reset to Remove latch
+ \item BMG Overload - Reset to Remove latch
+ \item SWM Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item SWM Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item SWM Power Failure - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item SWM Overload - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A Initializing - Non-latching
+ \item X2A/X3A/Y2A/Y3A Off - Non-latching
+ \item X2A/X3A/Y2A/Y3A Shutting Down - Non-latching
+ \item PSX2A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSX2A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSX2A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSX2A Communication Fault - Initialize to remove latch
+ \item PSY2A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSY2A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSY2A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSY2A Communication Fault - Initialize to remove latch
+ \item PSX3A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSX3A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSX3A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSX3A Communication Fault - Initialize to remove latch
+ \item PSY3A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSY3A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSY3A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSY3A Communication Fault - Initialize to remove latch
+ \item X2A/X3A/Y2A/Y3A Watchdog - Initialize to remove latch
+ \item GCC Initializing - Non-latching
+ \item GCC Off - Non-latching
+ \item GCC Shutting Down - Non-latching
+ \item GCC Current $PREAD \geq PHIGH$ - Non-latching
+ \item GCC Current $PREAD \leq PLOW$ - Non-latching
+ \item GCC Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item GCC Communication Fault - Initialize to remove latch
+ \item GCC Watchdog - Initialize to remove latch
+ \item BMG Initializing - Non-latching
+ \item BMG Off - Non-latching
+ \item BMG Shutting Down - Non-latching
+ \item BMG Current $PREAD \geq PHIGH$ - Non-latching
+ \item BMG Current $PREAD \leq PLOW$ - Non-latching
+ \item BMG Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item BMG Communication Fault - Initialize to remove latch
+ \item BMG Hardware Error - Initialize to remove latch
+ \item BMG Watchdog - Initialize to remove latch
+ \item SWM Initializing - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Off - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Shutting Down - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Ramping - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Communication Fault - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Hardware Error - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Watchdog - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item SWM Polarity Fault - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+Loss of control of the beamline magnets will result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the control magnets.  If the output current is out of tolerance or in question (e.g., see section \ref{sect:cyc-equip-ctl-beamline-sm23a-state-monitors-beam-interlocks} for a description) the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item PSX2A Current PSET  n.nn A
+ \item PSX2A Current PLOW  n.nn A
+ \item PSX2A Current PHIGH n.nn A
+ \item PSX2A Current PDiff n.n A
+ \item PSX2A Current PSEN  n
+ \item PSY2A Current PSET  n.nn A
+ \item PSY2A Current PLOW  n.nn A
+ \item PSY2A Current PHIGH n.nn A
+ \item PSY2A Current PDiff n.n A
+ \item PSY2A Current PSEN  n
+ \item PSX3A Current PSET  n.nn A
+ \item PSX3A Current PLOW  n.nn A
+ \item PSX3A Current PHIGH n.nn A
+ \item PSX3A Current PDiff n.n A
+ \item PSX3A Current PSEN  n
+ \item PSY3A Current PSET  n.nn A
+ \item PSY3A Current PLOW  n.nn A
+ \item PSY3A Current PHIGH n.nn A
+ \item PSY3A Current PDiff n.n A
+ \item PSY3A Current PSEN  n
+ \item GCC Current PSET  n.nn A
+ \item GCC Current PLOW  n.nn A
+ \item GCC Current PHIGH n.nn A
+ \item GCC Current PDiff n.n A
+ \item GCC Current PSEN  n
+ \item BMG Current PSET  nnn.n A
+ \item BMG Current PLOW  nnn.n A
+ \item BMG Current PHIGH nnn.n A
+ \item BMG Current PDiff n.n A
+ \item BMG Current PSEN  n
+ \item SWM Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item PSX2A Current MinLimit = -1.3 A
+ \item PSX2A Current MaxLimit = 1.3 A
+ \item PSX2A Current PLOWWarn = PLOW + 0.5 A
+ \item PSX2A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSY2A Current MinLimit = -1.3 A
+ \item PSY2A Current MaxLimit = 1.3 A
+ \item PSY2A Current PLOWWarn = PLOW + 0.5 A
+ \item PSY2A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSX3A Current MinLimit = -1.3 A
+ \item PSX3A Current MaxLimit = 1.3 A
+ \item PSX3A Current PLOWWarn = PLOW + 0.5 A
+ \item PSX3A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSY3A Current MinLimit = -1.3 A
+ \item PSY3A Current MaxLimit = 1.3 A
+ \item PSY3A Current PLOWWarn = PLOW + 0.5 A
+ \item PSY3A Current PHIGHWarn = PHIGH - 0.5 A
+ \item GCC Current MinLimit = -1.3 A
+ \item GCC Current MaxLimit = 1.3 A
+ \item GCC Current PLOWWarn = PLOW + 0.5 A
+ \item GCC Current PHIGHWarn = PHIGH - 0.5 A
+ \item BMG Current MinLimit = 0.0 A
+ \item BMG Current MaxLimit = 100.0 A
+ \item BMG Current PLOWWarn = PLOW + 1.0 A
+ \item BMG Current PHIGHWarn = PHIGH - 1.0 A
+ \item SWM Current MinLimit = 0.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item SWM Current MaxLimit = 100.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item SWM Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item SWM Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item PSX2A Current PSET  n.nn A
+ \item PSX2A Current PLOW  n.nn A
+ \item PSX2A Current PHIGH n.nn A
+ \item PSX2A Current PDiff n.nn A
+ \item PSX2A Current PSEN  n
+ \item PSX2A Voltage PREAD n.nn V
+ \item X2A Resistance PREAD n.n $\Omega$
+ \item X2A Resistance PLOW n.n $\Omega$
+ \item X2A Resistance PHIGH n.n $\Omega$
+ \item PSX3A Current PSET  n.nn A
+ \item PSX3A Current PLOW  n.nn A
+ \item PSX3A Current PHIGH n.nn A
+ \item PSX3A Current PDiff n.nn A
+ \item PSX3A Current PSEN  n
+ \item PSX3A Voltage PREAD n.nn V
+ \item X3A Resistance PREAD n.n $\Omega$
+ \item X3A Resistance PLOW n.n $\Omega$
+ \item X3A Resistance PHIGH n.n $\Omega$
+ \item PSY2A Current PSET  n.nn A
+ \item PSY2A Current PLOW  n.nn A
+ \item PSY2A Current PHIGH n.nn A
+ \item PSY2A Current PDiff n.nn A
+ \item PSY2A Current PSEN  n
+ \item PSY2A Voltage PREAD n.nn V
+ \item Y2A Resistance PREAD n.n $\Omega$
+ \item Y2A Resistance PLOW n.n $\Omega$
+ \item Y2A Resistance PHIGH n.n $\Omega$
+ \item PSY3A Current PSET  n.nn A
+ \item PSY3A Current PLOW  n.nn A
+ \item PSY3A Current PHIGH n.nn A
+ \item PSY3A Current PDiff n.nn A
+ \item PSY3A Current PSEN  n
+ \item PSY3A Voltage PREAD n.nn V
+ \item Y3A Resistance PREAD n.n $\Omega$
+ \item Y3A Resistance PLOW n.n $\Omega$
+ \item Y3A Resistance PHIGH n.n $\Omega$
+ \item GCC Current PSET  n.nn A
+ \item GCC Current PLOW  n.nn A
+ \item GCC Current PHIGH n.nn A
+ \item GCC Current PDiff n.nn A
+ \item GCC Current PSEN  n
+ \item GCC Voltage PREAD n.nn V
+ \item GCC Resistance PREAD n.n $\Omega$
+ \item GCC Resistance PLOW n.n $\Omega$
+ \item GCC Resistance PHIGH n.n $\Omega$
+ \item BMG Current PSET  nnn.n A
+ \item BMG Current PLOW  nnn.n A
+ \item BMG Current PHIGH nnn.n A
+ \item BMG Current PDiff n.n A
+ \item BMG Current PSEN  n
+ \item BMG Voltage PREAD nnn.n V
+ \item BMG Resistance PREAD nn.n $\Omega$
+ \item BMG Resistance PLOW nn.n $\Omega$
+ \item BMG Resistance PHIGH nn.n $\Omega$
+ \item SWM Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PDiff n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item SWM Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item SWM Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The SM23A Steering Magnets and Gantry Correction Coil power supplies are commercial Kikusui DC supplies.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+\end{document}

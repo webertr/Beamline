@@ -1,0 +1,531 @@
+\documentclass[11pt]{book}		% drafthead style seems not to work w\book
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{color}
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{\today}
+\setlength{\oddsidemargin}{0.50in}	% Note binding-side margin is wider,
+\setlength{\evensidemargin}{0.00in}	% unlike Lamport's defaults
+\setlength{\topmargin}{0.0in}
+\setlength{\textheight}{8.0in}
+\setlength{\textwidth}{6.0in}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.5cm}
+
+
+
+\title{CLINICAL NEUTRON THERAPY SYSTEM\\
+	Control System Specification 1.0\\[1.0cm]}
+%         Beam Diagnostics and Status Display \\[1.0cm]}
+%        Includes Operator Interface Overview, Status Terminal, Operatons Terminal, Equipment Control Overview, Magnet System Control, Extraction System Control, Beam Diagnostics System Control, Safety System, Control System\\[1.0cm]}
+
+
+\author{Robert Emery\\
+	Ruedi Risler\\
+	Dave Reid \\
+	Mat Hicks \\
+        Jonathan Jacky}
+%	\\ 
+%	Jonathan Unger \\
+%	Stan Brossard \\ [0.5cm]
+%	Radiation Oncology Department \\
+%	University of Washington\\
+%	Seattle, WA  98195 \\[0.5cm]
+%	Technical Report 92-05-01
+
+\date{\today}
+
+\begin{document}
+
+\chapter{Q23B System Control Testing} \label{ch:cyc-equip-ctl-beamline}
+
+\vspace*{-.75in}
+\today \\
+\vspace*{.75in}
+\\
+
+This chapter describes in detail the functional requirements for the control of the CNTS Cyclotron Extraction System which includes the Electrostatic Deflector (Deflector), Extraction System mechanical positioning, Septum Temperature Monitoring System, Electro-magnetic Channel (EMC), and Internal Steering Magnet.  Controls for these devices will follow the standards laid out in section \ref{sect:cyc-equip-ctl-definitions} unless specified otherwise below.
+
+\section{Quadropole 23A [Q2A,Q3A] [Lens13,Lens2]} \label{sect:cyc-equip-ctl-beamline-quad23b}
+
+The Quadropole 2A and 3A magnets each consist of 3 elements: Lens 1, Lens 2, and Lens 3. Lens 1 and Lens 3 are tied to the same power supply (PS[Q2A,Q3A] Lens13). Each power supply (PS[Q2A,Q3A] [Lens13,Lens2]) delivers up to 30 A and 20 V to produce magnetic fields used to focus the beam coming out of the cyclotron.  These power supplies operate in a current controlled mode with a minimum 12 bit I/O resolution, an output reproducibility of $\pm$ .110 A and a longterm output stability of $\pm$ 0.01 A over 8 hours. Quadropole 2A and 3A are both powered on and off together. As a result On/Off, Initialize, Reset, Local, Watchdog, Shutting Down, and the Particle Beam Interlock PLC bit are shared by the two Quadropoles in a ``Q23B'' group.
+
+\subsection{State Controls} \label{sect:cyc-equip-ctl-beamline-Q23B-state-controls}
+(See section \ref{sect:cyc-equip-ctl-definitions} for control definitions not described below)
+
+\begin{enumerate}
+ 
+\item (ON,OFF) 
+
+\color{red}
+1) Press the On button in the operations console. Observe the following: 
+	Does the PS come on? 
+	Does Q23B:On:Status go from zero to 1 when you do this? 
+	Does Q23B:Off:Status go from 1 to 0 when you do this? 
+	Does Q23B:Condition:Initializing:Status get set to 1 then 0?
+	Does Q23B:Reset:Interlocks:Write go to 1, then 0 again?
+
+2) Set Q23B:[Q2A,Q3A]:[Lens13,Lens2]:CommError:Status to false, then turn on and see if this clears.
+
+3) Set Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Curr:Set to 1.0 A for. Turn the PS off, and see if the ``Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Curr:Set'' goes to zero before ``Q23B:On:Status''. While this occurs, Q23B:Condition:ShuttingDown:Status should go to 1 temporarily. Then, turn on the PS back on, and ensure that Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Curr:Set returns to 1.0 A.
+
+4) Does pressing the Off button at the operations console turn off the PS? When you press off, does the ``Shutting Down'' light flash in both the operations and status display?
+
+5) On the Operations Console, and Status display, observe that PSET says zero for all 4 coils, L13,L2 when the PS is off.
+
+6) Place the device in local mode, and attempt to turn on the PS. You shouldn't be able to do this.
+
+7) When you turn on the device locally, make sure Q23B:Condition:Initializing:Status gets set to 1 then 0.
+
+
+\color{black}
+
+ \item Initialize
+
+\color{red}
+
+Press the Initialize button in the operations console and observe the following: 
+	Does the PV Q23B:Condition:Initializing:Status go from 0 to 1, then back to 0 during this process? 
+	Ensure that it flashes ``Initializing'' in Yellow on the operations and status display screen. 
+	Make sure you see the 4 PV's: Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Init:Status go from 0 to 1 then back to 0.
+
+Try setting Set Q23B:[Q2A,Q3A]:[Lens13,Lens2]:CommError:Status to false, then press Initialize and see if it goes back to true.
+
+
+\color{black}
+
+ \item [Q2A,Q3A] Polarity [Lens13,Lens2] (Positive,Negative) PSET (PS must be off before polarity change command may be issued)
+
+\color{red}
+
+1) With Q23B off and in the Positive Polarity state, press Negatuve Polarity in the operations console. Observe that Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Polarity:Left:Request changes from 0 to 1, then back to 0. Observe that the Polarity state changes from + to - on the status display, and on the actual PS. Observe that a transition appears on status display?? Ensure that the appropriate message is written out at the operations console. Now, go back to Right Polarity state, and observe all of the same things. Also try Neg-Neg and Pos-Pos.
+
+2) With the Q23B on and PSET=0, try and change the polarity. Observe that the polarity doesn't change, and that a message pops up on the operations console telling you that the polarity cannot be changed while the swm is on. Also verify that Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Polarity:Left:Request goes from 0 to 1 again. Try this going from both left to right, and right to left. Also try Neg - Neg, and Pos- Pos.
+
+
+\color{black}
+
+ \item Reset
+
+\color{red}
+
+Press the Reset button on the operations console, and observe the PV Q23B:Reset:Interlocks:Write go to 1, then 0 again. Other then that, I don't know how to force the temperature interlocks to trigger. But, go to the PLC screen, and verify that you see the reset coil throw with a a red button push from status display, and by pushing the Reset button in the operations console for to FC1.
+
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{On/Off} \label{sect:cyc-equip-ctl-beamline-quad23b-state-controls-on-off}
+
+The PSQ23B may be turned on or off via the operations console controls. Before the PSQ23B is turned Off, the current must be lowered to < 0.5 A on all 4 supplies.
+
+\color{red}
+
+Just watch it going up to SB2 sometime and verify that Q23B comes on.
+
+\color{black}
+
+\subsubsection{Standby 2 to Standby 1 Transition} \label{sect:cyc-equip-ctl-beamline-quad23b-state-controls-sb2tosb1}
+
+When the system is commanded to transition to the Standby 1 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby}, PSQ23B is turned off.
+
+\color{red}
+
+Just watch the system go to SB1 and verify that Q23B gets ramped down, turned off, and that the pset values are restored.
+
+\color{black}
+
+
+\subsection{State Monitors} \label{sect:cyc-equip-ctl-beamline-quad23b-state-monitors}
+(See section \ref{sect:cyc-equip-ctl-definitions} for state definitions not described below)
+
+\begin{enumerate}
+
+\item Q23B (ON,OFF)
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+\item \item Q23B Local
+
+\color{red}
+Press the Local button the PS, and see if the ``Local'' buttons lights up in both the operations terminal and status terminal.
+\color{black}
+
+\item Q23B Initializing
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Q23B Shutting Down
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Q23B [Q2A,Q3A] [Lens13,Lens2] Polarity (Positive,Negative)
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+\item +24 V Control Voltage Low
+
+\color{red}
+Not in control system.
+\color{black}
+
+\item Q23B [Q2A,Q3A] [Lens13,Lens2] Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}\label{sect:cyc-equip-ctl-beamline-quad23b-state-monitors-device-interlocks}
+
+[Q2A,Q3A] Device Interlocks:
+(Occurrence of interlock will turn off Q23B and not allow Q23B to be turned on unless otherwise noted)
+
+\begin{enumerate}
+ \item [Q2A,Q3A] Ground Fault - Reset Locally to Remove latch - No Remote Reset - Bundled with Q2A and Q3A
+
+\color{red}
+In the modicon PLC, force read coil ????? Off, and see if this is displayed in status display. Also ``Device Interlock'' should appear in red at above the operations console. I have not figured out a way to check to see if an actual ground fault would trigger this coil, or not. The reset command cannot fully be tested in this sense, eithier.
+\color{black}
+
+ \item [Q2A,Q3A] Flow - Reset to Remove latch
+
+\color{red}
+In the modicon PLC, force read coil ????? On, and see if this is displayed in status display. Also ``Device Interlock'' should appear in red at above the operations console. I have not figured out a way to check to see if an actual ground fault would trigger this coil, or not. The reset command cannot fully be tested in this sense, eithier.
+\color{black}
+
+ \item [Q2A,Q3A] Temp - Reset to Remove latch
+
+\color{red}
+In the modicon PLC, force read coil ????? On, and see if this is displayed in status display. Also ``Device Interlock'' should appear in red at above the operations console. I have not figured out a way to check to see if an actual ground fault would trigger this coil, or not. The reset command cannot fully be tested in this sense, eithier.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}\label{sect:cyc-equip-ctl-beamline-quad23b-state-monitors-beam-interlocks}
+
+Quad 23A Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item Q23B Initializing - Non-latching
+
+\color{red}
+Write Q23B:Condition:Initializing:Status from 0 to 1, and verify that Q23B:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+ \item Q23B Shutting Down - Non-latching
+
+\color{red}
+Write Q23B:Condition:ShuttingDown:Status to 1, and verify that Q23B:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+With PSET=0.5, set PHIGH to 0, and verify that Q23B:SubsystemOKSB2:Status goes from 1 to 0. Verify the appropriate changes in the PREAD display in operations console and status display.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+With PSET=0.5, set PLOW to .6, and verify that Q23B:SubsystemOKSB2:Status goes from 1 to 0.Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+With PSET=0.5, set PDIFF to 0, and verify that Q23B:SubsystemOKSB2:Status goes from 1 to 0 (may have to wait). Verify the appropriate changes in the PSET display in operations console and status display. This is a hard one to get off b/c the PS's are so stable and precise. I had trouble getting the PDIFF to actually be read.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Communication Fault - Initialize to remove latch
+
+\color{red}
+Write Q23B:[Q2A,Q3A]:[Lens13,Lens2]:CommError:Status from 0 to 1. Does Q23B:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console and status display?
+\color{black}
+
+ \item Q23B Watchdog - Initialize to remove latch
+
+\color{red}
+Write Q23B:OnandInit:Status from 1 to 0, which should stop the HB. Look for the PV Q23B:HeartbeatOK:Status to go from 1 to 0. You should also see Q23B:SubsystemOKSB2:Status goes from 1 to 0. You should see ``Q23B WatchDog OK'' appear in fushia on the status display screen. Then press the ``Initialize'' button, and observe that Q23B:HeartbeatOK:Status and Q23B:SubsystemOKSB2:Status return to 1, and ``Q23B WatchDog OK'' in the status display screen disappears.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Safety}\label{sect:cyc-equip-ctl-beamline-sm23a-safety}
+
+Loss of control of the PS[Q2A,Q3A] [Lens13,Lens2] will result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the PS[Q2A,Q3A] [Lens13,Lens2].  If the output current is out of tolerance or in question, as described in section \ref{sect:cyc-equip-ctl-beamline-quad2a-state-monitors-beam-interlocks}, the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\color{red}
+
+Bring up everything into SB2. Make sure everything is okay, so that you can run beam past FC1. Check that all the appropriate buttons are lit up, particularly the ``FC1 to Target'' button light should be on. With the RF On, and FC1 Open, but NO CATHODE CURRENT, change PLOW below PSET and observe that the RF shuts off. Also oberse that the to Target light shuts off. Then change PLOW for Q2A:Lens1 back to the appropriate value and verify that you can now turn the RF On, and the to Target light is back on. While RF is on, try inializling. A different color button should show, you should get the button skip directly to an error message in the console. Then try, Q23B:Init:String.PROC 1 and make sure it wont initilize and you get a message in the log.
+
+\color{black}
+
+
+\subsection{Analog Control Parameters}\label{sect:cyc-equip-ctl-beamline-quad23b-analog-control}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET  n.nn A
+
+\color{red}
+Set a value for PSET, and verify that it appears on the PS, in operations console and status display, and on PREAD (in operations console and status display).
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW  n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.n A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+
+\color{red}
+
+Change PSEN from 1 to 10, and verify that the tuning knob sensivity has changed in the tuning module. Here, you should also check that you can drag X2A into the tuning module, and control the PSET parameter with the knob. Move the knob, and observe the pset value on status display.
+
+\color{black}
+
+\end{enumerate}
+
+\subsection{Parameter Limits} \label{sect:cyc-equip-ctl-beamline-quad23b-analog-control-limits}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current MinLimit = 0.0 A
+
+\color{red}
+Make sure you cant change Q23B:Lens13/2:Curr:Set below 0 (with the supply off). Use probe.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current MaxLimit = 25 A
+
+\color{red}
+Make sure you cant change Q23B:[Q2A,Q3A]:[Lens13,Lens2]:Curr:Set above 25 (with the supply off). Use probe. Also, a resisotr 1.3kohm/4khm should set the supper limit at 1.3/4*FS current. NOt sure how to safely test that.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOWWarn = PLOW + 0.5 A
+
+\color{red}
+With PSET=.99, and PLOW set to .5, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display.
+\color{black}
+
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGHWarn = PHIGH - 0.5 A
+
+\color{red}
+With PSET=0.51, and PHIGH set to 1.0, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters} \label{sect:cyc-equip-ctl-beamline-quad23b-analog-display}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+ \item [Q2A,Q3A] [Lens13,Lens2] Voltage PREAD n.nn V
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PREAD n.n $\Omega$
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PLOW n.n $\Omega$
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PHIGH n.n $\Omega$
+\end{enumerate}
+
+\subsection{Implementation Notes} \label{sect:cyc-equip-ctl-beamline-Q23B-implementation}
+
+The Quadrapole 1 Lens 13, and Lens 2 power supplies are commercial Agilent 6032A.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+
+
+
+\chapter{Q23B Operations Console Testing}
+
+\subsubsection{Quadropole [Q2A,Q3A] Lens13 and Lens2 Power Supplies Subsystem Operations}\label{sect:cyc-op-interface-ops-terminal-subsys-ops-mainline-Q23B}
+
+\paragraph{Draggable Objects}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] ``[Lens13,Lens2]'' label. - Will assign [Q2A,Q3A] [Lens13,Lens2] output current parameter to Tuning Module or open [Q2A,Q3A] [Lens13,Lens2] Display in Device Operations region.
+\end{enumerate}
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+ \item Q23B (ON,OFF)
+ \item Q23B Initialize ((Button is disabled if device is off or if the RF is On)
+ \item [Q2A,Q3A] Polarity (+,-) (Is disabled if Q23B is On.)
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item Q23B (ON,OFF)
+ \item Q23B Local
+ \item Q23B Initializing - Flashing Yellow
+ \item Q23B Device Interlock - Red
+ \item [Q2A,Q3A] Communication Fault - Fuchsia
+ \item Q23B Process Heartbeat - Fuchsia
+\end{enumerate}
+
+\subsubsection{Q23B ([Q2A,Q3A] [Lens13,Lens2]) Device Operations} \label{sect:cyc-op-interface-ops-terminal-device-ops-q1}
+
+\paragraph{Title} \label{sect:cyc-op-interface-ops-terminal-device-ops-q1-title}
+
+The title of the system will be [Lens13,Lens2].  The color of the title bar will be teal.
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+\item None
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item None
+\end{enumerate}
+
+\paragraph{Analog Control Parameters}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET   nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW   nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH  nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+\end{enumerate}
+
+\paragraph{Analog Display Parameters}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET   nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PREAD  nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW   nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH  nn.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+\end{enumerate}
+
+
+
+
+\chapter{Q23B Status Display Testing}
+
+
+\subsection{Beamline to FC1 system} \label{sect:cyc-op-interface-status-terminal-display-contents-beamline-fc1}
+
+The Beamline to FC1 system includes the xxxx.
+
+The Beamline to FC1 status screen pops up in the status terminal when the button ``Beam Line to FC1'' is pushed on the CCC.
+
+If the to FC1 subsystem is not okay to run beam, the button ``Beam Line to FC1''. Will not be lit up.
+
+
+\subsubsection{Title}\label{sect:cyc-op-interface-status-terminal-display-contents-beamline-fc1-title}
+
+The title of the display is ``Beamline Control: to FC1''.  The color of the title bar is teal.
+
+\subsection{State Monitors} \label{sect:cyc-op-interface-status-beamline-tofc1-state-monitors}
+
+\begin{enumerate}
+ \item Q23B (ON,OFF)
+ \item Q23B Local
+ \item Q23B Initializing
+ \item Q23B Shutting Down
+ \item [Q2A,Q3A] [Lens13,Lens2] Polarity (+,-) PSET and PREAD
+\end{enumerate}
+
+\subsubsection{Device Interlocks}\label{sect:cyc-op-interface-status-beamline-tofc1-state-monitors-device-interlocks}
+
+Device Interlocks:
+(Occurence of these will turn off the corresponding device and prevent it from being turned back on until addressed)
+
+\begin{enumerate}
+ \item Q23B Ground Fault - Reset Locally to Remove latch - No Remote Reset
+ \item Q23B Cooling Flow - Reset to Remove latch
+ \item Q23B Over Temperature - Reset to Remove latch
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}\label{sect:cyc-op-interface-status-beamline-tofc1-state-monitors-beam-interlocks}
+
+Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item Q23B Initializing - Non-latching
+ \item Q23B Off - Non-latching
+ \item Q23B Shutting Down - Non-latching
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $PREAD \geq PHIGH$ - Non-latching
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $PREAD \leq PLOW$ - Non-latching
+ \item [Q2A,Q3A] [Lens13,Lens2] Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item [Q2A,Q3A] [Lens13,Lens2] Communication Fault - Initialize to remove latch
+ \item Q23B Watchdog - Initialize to remove latch
+\end{enumerate}
+
+
+\subsection{Safety}\label{sect:cyc-op-interface-status-beamline-tofc1-safety}
+
+Loss of control of the beamline magnets will result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the control magnets.  If the output current is out of tolerance or in question (e.g., see section \ref{sect:cyc-equip-ctl-beamline-sm23a-state-monitors-beam-interlocks} for a description) the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+\subsection{Analog Control Parameters}\label{sect:cyc-op-interface-status-beamline-tofc1-analog-control}
+
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.n A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+\end{enumerate}
+
+\subsection{Parameter Limits} \label{sect:cyc-op-interface-status-beamline-tofc1-analog-control-limits}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current MinLimit = 0.0 A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current MaxLimit = 35.0 A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOWWarn = PLOW + 0.5 A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGHWarn = PHIGH - 0.5 A
+\end{enumerate}
+
+\subsection{Analog Display Parameters} \label{sect:cyc-op-interface-status-beamline-tofc1-analog-display}
+
+\begin{enumerate}
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSET  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PLOW  n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PHIGH n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PDiff n.nn A
+ \item [Q2A,Q3A] [Lens13,Lens2] Current PSEN  n
+ \item [Q2A,Q3A] [Lens13,Lens2] Voltage PREAD n.nn V
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PREAD n.n $\Omega$
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PLOW n.n $\Omega$
+ \item [Q2A,Q3A] [Lens13,Lens2] Resistance PHIGH n.n $\Omega$
+\end{enumerate}
+
+
+
+\end{document}

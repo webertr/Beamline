@@ -1,0 +1,14 @@
+# Load the database to monitor what line is selected and update the SWM values.
+ file "db/BMG/BMGBeamlineLoadSetting.template" { pattern
+{SubSys,Param,Line,PVTreat,PVTest}
+{"BMG","Set","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"BMG","Set","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"BMG","PHIGH","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"BMG","PHIGH","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"BMG","PLOW","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"BMG","PLOW","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"BMG","PDIFF","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"BMG","PDIFF","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"BMG","PSENS","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"BMG","PSENS","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+}

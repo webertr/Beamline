@@ -1,0 +1,896 @@
+\documentclass[11pt]{book}		% drafthead style seems not to work w\book
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{color}
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{\today}
+\setlength{\oddsidemargin}{0.50in}	% Note binding-side margin is wider,
+\setlength{\evensidemargin}{0.00in}	% unlike Lamport's defaults
+\setlength{\topmargin}{0.0in}
+\setlength{\textheight}{8.0in}
+\setlength{\textwidth}{6.0in}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.5cm}
+
+
+
+\title{CLINICAL NEUTRON THERAPY SYSTEM\\
+	Control System Specification 1.0\\[1.0cm]}
+%         Beam Diagnostics and Status Display \\[1.0cm]}
+%        Includes Operator Interface Overview, Status Terminal, Operatons Terminal, Equipment Control Overview, Magnet System Control, Extraction System Control, Beam Diagnostics System Control, Safety System, Control System\\[1.0cm]}
+
+
+\author{Robert Emery\\
+	Ruedi Risler\\
+	Dave Reid \\
+	Mat Hicks \\
+        Jonathan Jacky}
+%	\\ 
+%	Jonathan Unger \\
+%	Stan Brossard \\ [0.5cm]
+%	Radiation Oncology Department \\
+%	University of Washington\\
+%	Seattle, WA  98195 \\[0.5cm]
+%	Technical Report 92-05-01
+
+\date{\today}
+
+\begin{document}
+
+
+
+
+
+
+
+
+
+\chapter{GDP System Control Testing}
+
+The Gantry Dipole Power Supply (PSBMG) delivers up to 375 A at 115 V to two bending magnets in the gantry. The magnets are in series and produce a 70, then 160 degree turn of the particle beam as it is transported to the target head. The maximum field created by the Gantry Dipole is 1.68 T. The PSGDP operates in a current controlled mode with a minimum 12 bit I/O resolution, with a short term (30 minutes) output reproducibility of $\pm$ $5$ $\times$ $10^{-6}$ A and a longterm output stability of $\pm$ $2$ $\times$ $10^{-5}$ over 24 hours. The PSGDP is made by Danfysik. 
+
+
+\subsection{State Controls} \label{sect:cyc-equip-ctl-beamline-gdp-state-controls}
+(See section \ref{sect:cyc-equip-ctl-definitions} for control definitions not described below)
+
+\begin{enumerate}
+
+ \item (ON,OFF)
+
+\color{red}
+1) Press the On button in the operations console. Observe the following: 
+	Does the PS come on? 
+	Does GDP:On:Status go from zero to 1 when you do this? 
+	Does GDP:Condition:Initializing:Status get set to 1 then 0?
+	Does GDP:Reset:Interlocks:Write go to 1, then 0 again?
+
+2) Set GDP:CommError:Status and GDP:HardwareError:Status to false, then turn on and see if this clears.
+
+3) Set PSET to 250 A for GDP. Turn the PS off, and see if the "GDP:Curr:Read" goes to $<$ 200A before "GDP:On:Status" goes to zero. While this occurs, GDP:Condition:ShuttingDown:Status should go to 1 temporarily. Then, turn on the PS back on, and ensure that "GDP:Curr:Set" returns to 250 A.
+
+4) Does pressing the Off button at the operations console turn off the PS? When you press off, does the "Shutting Down" light flash in both the operations and status display?
+
+5) On the Operations Console, and Status display, observe that PREAD says zero for GDP when the PS is off.
+
+6) Place the device in local mode, and attempt to turn on the PS. You shouldn't be able to do this.
+
+7) When you turn on the device locally, make sure GDP:Condition:Initializing:Status gets set to 1 then 0.
+
+
+\color{black}
+
+ \item Initialize (Disabled if the RF is on AND the beam path to the gantry is open, OR the 24 Volts on the device is off)
+
+\color{red}
+
+Press the Initialize button in the operations console and observe the following:
+	Does the PV GDP:Condition:Initializing:Status go from 0 to 1, then back to 0 during this process? 
+	Ensure that it flashes "Initializing" in Yellow on the operations and status display screen. 
+
+Try setting Set GDP:CommError:Status and GDP:HardwareError:Status to false, then press Initialize and see if they go back to true.
+With the RF on and 0 cathode current, and the beam path to the gantry open, verify that you cannot press the Initialize button. Then type caput GDP:Init:Curr:String.PROC 1 and verify the the PS does not initialize (you should see a message ''can't initialize, beam on'' or something like that.
+
+\color{black}
+
+
+ \item Reset (Reset is accomplished by sending OFF command to power supply)
+
+\color{red}
+
+With the GDP Off and in remote mode, turn off the cooling water. Verify that Device Interlock shows up in ops dipslay, and that he status display terminal shows the two cooilng interlcoks. Try turning on the GDP, and verify that you are prevented from doing so, and the appropriate message (the 2 cooing interlocks) appears in the message board. Try turning the PSGDP on locally, and verify that it won't go on. Then turn it back on and observe that the magnet and PS cooling interlocks still exist. Then, press the Reset button on the operations console, and observe the interlocks clear on both screens, and that you can now turn on the PSGDP.
+
+\color{black}
+
+\end{enumerate}
+
+
+\subsubsection{Beamline Selection} \label{sect:cyc-equip-ctl-beamline-gdp-state-controls-polarity}
+
+If the sytem is in the Standby 2 state with Line A selected, the PSGDP is turned on. In order to run beam past FC3A, the PSGDP must be on with no particle beam interlocks.
+
+\color{red}
+
+With the system in SB2, press line a and verify that the gdp is turned on.
+
+Bring up everything into SB2, and select beamline A. Make sure everything is okay, so that you can run beam down the A line to the target. Check that all the appropriate buttons are lit up, particularly the ``FC1 to Target'' button light should be on, and the FC1 ``Interlock'' light should be off. With the RF On, and FC1 Open, but NO CATHODE CURRENT, change PLOW below PSET and observe that the RF shuts off, and FC3A gets put in. Then observe the ``Interlock'' light is on next to FC3A, and that the light on the ``FC1 to Tartget'' button turns off. Try opening FC3A and verify that it won't open. Turn the RF back on, with FC3A in. With the RF on, verify that you still cannot open FC3A. Then change PLOW for the GDP back to the appropriate value and verify that the FC3A ``Interlock'' light goes away, the ``FC1 to Target'' button light turns on, and now you can open the FC3A with the RF On.
+
+
+For the heck of it, you can select b and c with the gdp off, and verify that the gdp doesn't turn on. You could also do the same thing with the gdp on, and verify that it doesn't turn off.
+
+\color{black}
+
+
+\subsubsection{Standby 1 to Standby 2 Transition}
+
+When the system is commanded to transition to the Standby 2 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby} no action will occur unless a beamline is selected. See Beamline Selection for details on what actions then occur.
+
+\color{red}
+
+Tested above.
+
+\color{black}
+
+\subsubsection{Standby 2 to Standby 1 Transition}
+
+When the system is commanded to transition to the Standby 1 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby}, PSGDP is turned off.
+
+\color{red}
+
+Press SB1 button with gdp on, and verify that it turns off.
+
+\color{black}
+
+
+\subsection{State Monitors} \label{sect:cyc-equip-ctl-beamline-gdp-state-monitors}
+(See section \ref{sect:cyc-equip-ctl-definitions} for state definitions not described below)
+
+\begin{enumerate}
+ \item (ON,OFF)
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Local (Local includes front panel analog control of output current)
+
+\color{red}
+Press the Local button the PS, and see if the "Local" buttons lights up in both the operations terminal and status terminal.
+\color{black}
+
+ \item Initializing
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Shutting Down
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Control Power Off
+
+\color{red}
+Turn off the control power on the psbmg, and verify that the warning light comes up on status display, and that Device Interlock shows on ops display.
+\color{black}
+
+ \item GDP Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item PSGDP Transistor Failure
+
+\color{red}
+This is a warning light to let you know if $>$ 1 percent of the transistors have failed. It doesn't throw any interlocks, and I don't know how to test that this signal will appears on the status display screen.
+\color{black}
+
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+GDP Device Interlocks:
+(Occurrence of interlock will turn off the BMG PS and not allow it to be turned on unless otherwise noted)
+
+\begin{enumerate}
+ \item Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+Already tested in State Controls
+\color{black}
+
+ \item Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+Already tested in State Controls
+\color{black}
+
+ \item Power Failure - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock, b/c I have no way of generating it. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\item Overload - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock b/c I have no way of generating. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+GDP Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item GDP Initializing - Non-latching
+
+\color{red}
+
+Write GDP:Condition:Initializing:Status from 0 to 1, and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0.
+
+\color{black}
+
+ \item GDP Off - Non-latching
+
+\color{red}
+If the PS is off (and pread and pset reading zero, with pdiff $>$ 0), then GDP:SubsystemOKSB2:Status should be 0. Go the modicon PLC, and cheat the 10434 bit and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0. This logic is handled directly in the PLC, not be EPICS.
+
+\color{black}
+
+ \item GDP Shutting Down - Non-latching
+
+\color{red}
+Write GDP:Condition:ShuttingDown:Status to 1, and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+ \item GDP Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+With PSET=30, set PHIGH to 20, and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0. Verify the appropriate changes in the PREAD display in operations console and status display.
+\color{black}
+
+ \item GDP Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+With PSET=25, set PLOW to 30, and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0.Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item GDP Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+With PSET=30, set PDIFF to 0, and verify that GDP:SubsystemOKSB2:Status goes from 1 to 0 (may have to wait). Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item GDP Communication Fault - Initialize to remove latch
+
+\color{red}
+Write GDP:CommError:Status from 0 to 1. Does GDP:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console and status display? You could also start in an OK state, and unplug the ethernet from the BMG acromag. I didn't try this. This should register a commerror, amung things.
+\color{black}
+
+ \item GDP Hardware Error - Initialize to remove latch
+
+\color{red}
+Write GDP:HardwareError:Status from 0 to 1. Does GDP:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console (Interlock) and status display (Aromag Fault or something like that)?
+\color{black}
+
+
+ \item GDP Watchdog - Initialize to remove latch
+
+\color{red}
+You cannot stop the heartbeat. What you can do, is restart the IOC. THe HB will start, but the reset commmand needs to be thrown to start the Watchdog OK in the PLC. So the test is restart the HB. Verify the Watchdog error on the ops and status display. After setting PSET, PLOW, and PHIGH to acceptable values, verify that GDP:SubsystemOKSB2:Status is still 0. Then press initialize, and verify that the watchdog error goes away on ops and status, and that GDP:SubsystemOKSB2:Status changes from 0 to 1.
+\color{black}
+
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+If used, loss of control of the PSBMG would result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the PSBMG.  If the output current is out of tolerance or in question, as described in section \ref{sect:cyc-equip-ctl-beamline-bmg-state-monitors-beam-interlocks}, the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\color{red}
+
+Tested in beamline selected above.
+
+\color{black}
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item GDP Current PSET  n.nn A
+
+\color{red}
+Set a value for PSET, and verify that it appears on the PS, in operations console and status display, and on PREAD (in operations console and status display).
+\color{black}
+
+ \item GDP Current PLOW  n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item GDP Current PHIGH n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item GDP Current PDiff n.n A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item GDP Current PSEN  n
+
+\color{red}
+Change PSEN from 1 to 10, and verify that the tuning knob sensivity has changed in the tuning module. Here, you should also check that you can drag GDP into the tuning module, and control the PSET parameter with the knob. Move the knob, and observe the pset value on status display.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item GDP Current MinLimit = 187.5 A
+
+\color{red}
+Set PSET to -1, and verify that the PV GDP:Curr:SetDevice only goes to 187.5.
+\color{black}
+
+ \item GDP Current MaxLimit = 375 A
+
+\color{red}
+Set PSET to 385, and verify that the PV GDP:Curr:SetDevice only goes to 375. Quickly return PSET to 0.
+\color{black}
+
+ \item GDP Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+With PSET=10, and PLOW set to 9.1, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then set PLOW to 8.9, and verify that everything goes back to normal.
+\color{black}
+
+ \item GDP Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+With PSET=10, and PHIGH set to 10.9, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then change PHIGH to 11.1 and verify that everything goes back to normal.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item PSGDP Current PSET  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSGDP Current PLOW  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSGDP Current PHIGH n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSGDP Current PDiff n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSGDP Current PSEN  n
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSGDP Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The GDP power supply is commercial Kikusui DC supplies.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+To run beam past FC3A into the Gantry, the PSGDP needs to be on, with no particle beam interlocks.
+
+
+\color{red}
+
+Already tested in beamline selection.
+
+\color{black}
+
+
+
+
+
+
+\chapter{GDP Operations Console Testing}
+
+\paragraph{Draggable Objects}
+
+\begin{enumerate}
+ \item ``GDP'' label. - Will assign BMG output current parameter to Tuning Module or open BMG Display in Device Operations region.
+
+\color{red}
+Already tested in Analog Control Parameters.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+ \item GDP (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item GDP Initialize (Button is disabled if device is off, OR if the RF is On AND the beam path to the gantry is open)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item GDP (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item GDP Local
+
+\color{red}
+Already checked on State Monotors of System Control Testing.
+\color{black}
+
+ \item GDP Initializing - Flashing Yellow
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item GDP Device Interlock - Red
+
+\color{red}
+Already checked on Device Interlocks Section of System Control Testing.
+\color{black}
+
+ \item GDP Interlock - Fuchsia - Communication, Hardware, or Watchdog Error
+
+\color{red}
+Already checked on Particle Beam Interlocks of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Gantry Dipole Magnet (GDP) Device Operations}
+
+\paragraph{Title} \label{sect:cyc-op-interface-ops-terminal-device-ops-gcc-title}
+
+The title of the system will be GDP.  The color of the title bar will be teal.
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+\item None
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item None
+\end{enumerate}
+
+\paragraph{Analog Control Parameters}
+
+\begin{enumerate}
+ \item GDP Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{Analog Display Parameters}
+
+\begin{enumerate}
+ \item GDP Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PREAD  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+
+
+
+
+\chapter{GDP Status Display Testing}
+
+The Beamline to FC1 system includes the xxxx.
+
+The Beamline FC1 to Target status screen pops up in the status terminal when the button "Beam Line FC1 to Target" is pushed on the CCC. The status screen is tabbed display such that the status of FC1-to-FC3, FC3-to-Target, Beamline B, and Beamline C may be displayed.  The switching magnet is shown for all 4 states, while the bending magnet is shown for only Beamline B and Beamline C.  When Beamline A is selected by the operator on the CCC, the tab for FC1-to-FC3 is selected. When Beamline B or C is selected, the corresponding tab in status dispay is selected. The user always has the ability to select the desired tab with the mouse pointer.
+
+\subsubsection{Title}\label{sect:cyc-op-interface-status-terminal-display-contents-beamline-target-title}
+
+The title of the display is "Beamline Control: FC1 to Target".  The color of the title bar is forest green.
+
+\subsection{State Monitors}
+
+\begin{enumerate}
+ \item GDP (ON,OFF)
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item GDP Local
+
+\color{red}
+Already checked on State Monitor section of System Control Testing.
+\color{black}
+
+ \item GDP Initializing
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item GDP Shutting Down
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item GDP +24 V Control Voltage Low
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+\item GDP Transistor Failure
+
+\color{red}
+I don't know of a way to get this indicator to come on.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+Device Interlocks:
+(Occurence of these will turn off the corresponding device and prevent it from being turned back on until addressed)
+
+\begin{enumerate}
+ \item GDP Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item GDP Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item GDP Power Failure - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item GDP Overload - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item GDP Initializing - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Off - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Shutting Down - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Communication Fault - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Hardware Error - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item GDP Watchdog - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+Loss of control of the beamline magnets will result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the control magnets.  If the output current is out of tolerance or in question (e.g., see section \ref{sect:cyc-equip-ctl-beamline-sm23a-state-monitors-beam-interlocks} for a description) the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item GDP Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item GDP Current MinLimit = 0.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item GDP Current MaxLimit = 375.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item GDP Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item GDP Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item GDP Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PDiff n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item GDP Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item GDP Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The SM23A Steering Magnets and Gantry Correction Coil power supplies are commercial Kikusui DC supplies.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+\end{document}

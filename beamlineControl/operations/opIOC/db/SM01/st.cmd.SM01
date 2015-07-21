@@ -1,0 +1,44 @@
+#!../../bin/linux-x86/spring
+
+## You may have to change srcextr to something else
+## everywhere it appears in this file
+
+< envPaths
+
+epicsThreadSleep(5)
+
+## Register all support components
+dbLoadDatabase("../../dbd/spring.dbd")
+spring_registerRecordDeviceDriver(pdbbase)
+
+## Setup the GPIB gateway for the Internal Steering Magnet
+E5810Reboot("192.168.0.153",0)
+vxi11Configure("ISMGateway", "192.168.0.153", 1, 2, "gpib0")
+##vxi11Configure("ISMGateway2", "192.168.0.160", 1, 2, "gpib0")
+
+## Load record instances
+
+##Load ISM Records
+dbLoadRecords("../../db/ISM/ISMTest/ISMOnOff.vdb", "SubSys=ISM, Device=Output, Param=Curr, Group=ISM")
+dbLoadRecords("../../db/ISM/ISMTest/ISMInitialize.vdb", "Group=ISM")
+dbLoadRecords("../../db/ISM/ISMTest/ISMInitializeSupply.vdb", "SubSys=ISM, Device=Output, R=1, AsynPort=ISMGateway")
+dbLoadRecords("../../db/ISM/ISMTest/ISMCondition.vdb","SubSys=ISM, Device=Output, Param=Curr, Group=ISM")
+dbLoadRecords("../../db/ISM/ISMTest/ParamSet.vdb","SubSys=ISM, Device=Output, Param=Curr, NoAttach=1,Mult=.002,EGU=A,PREC=2,PWZ=.2,DRVH=2,DRVL=-2")
+dbLoadRecords("../../db/ISM/ISMTest/ISMAnalog.vdb", "SubSys=ISM, Device=Output, Param=Curr,Group=ISM, R=1, AsynPort=ISMGateway, Prec=2")
+dbLoadRecords("../../db/ISM/ISMTest/ISMControlSeq.vdb", "Group=ISM")
+
+## These create messages when pressed that say "Cannot $(Msg), $(Reason)." They are used to disable buttons (Ex. Init)
+dbLoadRecords("../../db/ISM/ISMTest/Prevent.vdb","PV=ISM:BeamOn:Init,Msg=Init ISM,Reason=Beam On")
+dbLoadRecords("../../db/ISM/ISMTest/Prevent.vdb","PV=ISM:NotOn:Init,Msg=Init ISN,Reason=Not On")
+
+
+##dbLoadRecords("../../db/ISM/ISMCommTest.vdb")
+
+## Set this to see messages from mySub
+var mySubDebug 1
+
+iocInit()
+
+##asynSetTraceMask(ISMGateway,1,0xff)
+##asynSetTraceMask(ISMGateway2,1,0xff)
+##asynSetTraceMask(ISMGateway2,10,0xff)

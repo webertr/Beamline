@@ -1,0 +1,1033 @@
+\documentclass[11pt]{book}		% drafthead style seems not to work w\book
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{color}
+%\usepackage{fancyhdr}
+%\pagestyle{fancy}
+%\lhead{\today}
+\setlength{\oddsidemargin}{0.50in}	% Note binding-side margin is wider,
+\setlength{\evensidemargin}{0.00in}	% unlike Lamport's defaults
+\setlength{\topmargin}{0.0in}
+\setlength{\textheight}{8.0in}
+\setlength{\textwidth}{6.0in}
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.5cm}
+
+
+
+\title{CLINICAL NEUTRON THERAPY SYSTEM\\
+	Control System Specification 1.0\\[1.0cm]}
+%         Beam Diagnostics and Status Display \\[1.0cm]}
+%        Includes Operator Interface Overview, Status Terminal, Operatons Terminal, Equipment Control Overview, Magnet System Control, Extraction System Control, Beam Diagnostics System Control, Safety System, Control System\\[1.0cm]}
+
+
+\author{Robert Emery\\
+	Ruedi Risler\\
+	Dave Reid \\
+	Mat Hicks \\
+        Jonathan Jacky}
+%	\\ 
+%	Jonathan Unger \\
+%	Stan Brossard \\ [0.5cm]
+%	Radiation Oncology Department \\
+%	University of Washington\\
+%	Seattle, WA  98195 \\[0.5cm]
+%	Technical Report 92-05-01
+
+\date{\today}
+
+\begin{document}
+
+
+
+
+
+
+
+
+
+\chapter{BMG System Control Testing}
+
+The Bending Magnet Power Supply (PSBMG) delivers up to 100 A and 66 V to produce a magnet field to transport a postively charged particle beam through 48 degree turn. The turn is necessary to transport the beam to Beamline C. The PSBMG operates in a current controlled mode with a minimum 12 bit I/O resolution, an output reproducibility of $\pm$ $5$ $\times$ $10^{-6}$ A and a longterm output stability of $\pm$ $1$ $\times$ $10^{-4}$ over 24 hours. The PSBMG is made by Danfysik. 
+
+\subsection{State Controls} \label{sect:cyc-equip-ctl-beamline-gcc-state-controls}
+(See section \ref{sect:cyc-equip-ctl-definitions} for control definitions not described below)
+
+\begin{enumerate}
+
+ \item (ON,OFF)
+
+\color{red}
+1) Press the On button in the operations console. Observe the following: 
+	Does the PS come on? 
+	Does BMG:On:Status go from zero to 1 when you do this? 
+	Does BMG:Condition:Initializing:Status get set to 1 then 0?
+	Does BMG:Reset:Interlocks:Write go to 1, then 0 again?
+
+2) Set BMG:CommError:Status and BMG:HardwareError:Status to false, then turn on and see if this clears.
+
+3) Set PSET to 30.0 A for BMG. Turn the PS off, and see if the "BMG:Curr:Read" goes to $<$ 10A before "BMG:On:Status" goes to zero. While this occurs, BMG:Condition:ShuttingDown:Status should go to 1 temporarily. Then, turn on the PS back on, and ensure that "BMG:Curr:Set" returns to 30.0 A.
+
+4) Does pressing the Off button at the operations console turn off the PS? When you press off, does the "Shutting Down" light flash in both the operations and status display?
+
+5) On the Operations Console, and Status display, observe that PREAD says zero for BMG when the PS is off.
+
+6) Place the device in local mode, and attempt to turn on the PS. You shouldn't be able to do this.
+
+7) When you turn on the device locally, make sure BMG:Condition:Initializing:Status gets set to 1 then 0.
+
+
+\color{black}
+
+ \item Initialize
+
+\color{red}
+
+Press the Initialize button in the operations console and observe the following:
+	Does the PV BMG:Condition:Initializing:Status go from 0 to 1, then back to 0 during this process? 
+	Ensure that it flashes "Initializing" in Yellow on the operations and status display screen. 
+
+Try setting Set BMG:CommError:Status and BMG:HardwareError:Status to false, then press Initialize and see if they go back to true.
+With the RF on and 0 cathode current, and verify that you cannot press the Initialize button. Then type caput BMG:Init:Curr:String.PROC 1 and verify the the PS does not initialize (you should see a message ''can't initialize, beam on'' or something like that.
+
+\color{black}
+
+
+ \item Reset (Reset is accomplished by sending OFF command to power supply)
+
+\color{red}
+
+With the BMG Off and in remote mode, turn off the cooling water. Verify that Device Interlock shows up in ops dipslay, and that he status display terminal shows the two cooilng interlcoks. Try turning on the BMG, and verify that you are prevented from doing so, and the appropriate message (the 2 cooing interlocks) appears in the message board. Try turning the PSBMG on locally, and verify that it won't go on. Then turn it back on and observe that the magnet and PS cooling interlocks still exist. Then, press the Reset button on the operations console, and observe the interlocks clear on both screens, and that you can now turn on the PSBMG.
+
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Standby 1 to Standby 2 Transition}
+
+When the system is commanded to transition to the Standby 2 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby}, PSBMG is turned on.
+
+\color{red}
+
+To Simulate going to SB2, you place a 1 on the field, BeamlineControl:GotoStandby2:BLC.PROC. Wait 20 seconds. This should turn on BMG. Verify that this happens. 
+
+Also, if the B or C line is selected, and the SB2 button is hit, the BMG should come on. For line B, this should only happen if the bmg pset for line B is not equal to 0. Otherwise, if the bmg pset of line b is zero, the bmg should turn off when line B is selected. Still needs to be tested.
+
+When line A, or Zero are selected, the BMG should turn off.
+
+Also, if line B or C is selected, a current for that line should load. If the operator is tuning on a line (C or B) and saves a setting, that current should get saved to the appropriate line (B or C).
+
+To test this, bring to SB2 with no line selected, and set BMG:Curr:Set:LineB = 5.0, and ensure that BMG:Curr:Set=0.0 and that the bmg is off. THen select line B, and observe that the bmg turns on, and BMG:Curr:Set changes to 5.0. Then tune the bmg current in the operations console and verify that BMG:Curr:Set:LineB gets updated. Do the same thing for line C. Finally, with no line selected in sb2 with BMG:Curr:Set:LineB = 0 and the bmg off, select line B, and verify that the bmg does not turn on, and BMG:Curr:Set gets set to zero. Do this again but start with the bmg on, and verify that the bmg gets turned off.
+
+\color{black}
+
+\subsubsection{Standby 2 to Standby 1 Transition}
+
+When the system is commanded to transition to the Standby 2 state as described in section \ref{sect:cyc-equip-ctl-controls-system-coordination-standby} and line C is selcted or line B is selected with the BMG Current PSET not equal to zero, the PSBMG is turned on.
+
+\color{red}
+
+To Simulate going to SB1, you place a 1 on the field, BeamlineControl:GotoStandby1.PROC. This should turn off bmg.  Verify that this happens.
+
+Also, if the system is in SB2, and the BMG is on, selecting A or B in treat or test, should turn off the bmg. test to see if this happens.
+
+\color{black}
+
+
+\subsection{State Monitors} \label{sect:cyc-equip-ctl-beamline-gcc-state-monitors}
+(See section \ref{sect:cyc-equip-ctl-definitions} for state definitions not described below)
+
+\begin{enumerate}
+ \item (ON,OFF)
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Local (Local includes front panel analog control of output current)
+
+\color{red}
+Press the Local button the PS, and see if the "Local" buttons lights up in both the operations terminal and status terminal.
+\color{black}
+
+ \item Initializing
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Shutting Down
+
+\color{red}
+Already checked this in State Controls above.
+\color{black}
+
+ \item Control Power Off
+
+\color{red}
+Turn off the control power on the psbmg, and verify that the warning light comes up on status display, and that Device Interlock shows on ops display.
+\color{black}
+
+ \item BMG Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item PSBMG Transistor Failure
+
+\color{red}
+This is a warning light to let you know if $>$ 1 percent of the transistors have failed. It doesn't throw any interlocks, and I don't know how to test that this signal will appears on the status display screen.
+\color{black}
+
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+BMG Device Interlocks:
+(Occurrence of interlock will turn off the BMG PS and not allow it to be turned on unless otherwise noted)
+
+\begin{enumerate}
+ \item Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+Already tested in State Controls
+\color{black}
+
+ \item Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+Already tested in State Controls
+\color{black}
+
+ \item Power Failure - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock, b/c I have no way of generating it. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\item Overload - Reset to Remove latch
+
+\color{red}
+I don't know how to test this interlock b/c I have no way of generating. Should at least verify that it exists on the status display screen.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+GCC Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item BMG Initializing - Non-latching
+
+\color{red}
+Write BMG:Condition:Initializing:Status from 0 to 1, and verify that BMG:SubsystemOKSB2:Status goes from 1 to 0.
+
+At some point, you need to have system up and ready to SB2 for running on beamline C, and check that one of these interlocks prevents you from running beam. You also need a way to check that the light goes off on the CCC that corresponds to OK FC1 to Target.
+\color{black}
+
+ \item BMG Off - Non-latching
+
+\color{red}
+If the PS is off (and pread and pset reading zero, with pdiff $>$ 0), then BMG:SubsystemOKSB2:Status should be 0. A way to test this is with everything OK, and PSET=0.0 and pdiff=10.0, switch the PS over to local (everything should still be ok) with the pot turned all the way down. Then, turn it off and make sure that BMG:SubsystemOKSB2:Status now reads 0, and that PREAD is 0 (not some large negative value, which happens sometimes with small voltage flucatuations around 0).
+\color{black}
+
+ \item BMG Shutting Down - Non-latching
+
+\color{red}
+Write BMG:Condition:ShuttingDown:Status to 1, and verify that BMG:SubsystemOKSB2:Status goes from 1 to 0.
+\color{black}
+
+ \item BMG Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+With PSET=25, set PHIGH to 10, and verify that BMG:SubsystemOKSB2:Status goes from 1 to 0. Verify the appropriate changes in the PREAD display in operations console and status display.
+\color{black}
+
+ \item BMG Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+With PSET=25, set PLOW to 30, and verify that BMG:SubsystemOKSB2:Status goes from 1 to 0.Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item BMG Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+With PSET=25, set PDIFF to 0, and verify that BMG:SubsystemOKSB2:Status goes from 1 to 0 (may have to wait). Verify the appropriate changes in the PSET display in operations console and status display.
+\color{black}
+
+ \item BMG Communication Fault - Initialize to remove latch
+
+\color{red}
+Write BMG:CommError:Status from 0 to 1. Does BMG:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console and status display? You could also start in an OK state, and unplug the ethernet from the BMG acromag. I didn't try this. This should register a commerror, amung things.
+\color{black}
+
+ \item BMG Hardware Error - Initialize to remove latch
+
+\color{red}
+Write BMG:HardwareError:Status from 0 to 1. Does BMG:SubsystemOKSB2:Status goes from 1 to 0? Does a CommError Fushia colored light come on in the operations console (Interlock) and status display (Aromag Fault or something like that)?
+\color{black}
+
+
+ \item BMG Watchdog - Initialize to remove latch
+
+\color{red}
+You cannot stop the heartbeat. What you can do, is restart the IOC. THe HB will start, but the reset commmand needs to be thrown to start the Watchdog OK in the PLC. So the test is restart the HB. Verify the Watchdog error on the ops and status display. After setting PSET, PLOW, and PHIGH to acceptable values, verify that BMG:SubsystemOKSB2:Status is still 0. Then press initialize, and verify that the watchdog error goes away on ops and status, and that BMG:SubsystemOKSB2:Status changes from 0 to 1.
+\color{black}
+
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+If used, loss of control of the PSBMG would result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the PSBMG.  If the output current is out of tolerance or in question, as described in section \ref{sect:cyc-equip-ctl-beamline-bmg-state-monitors-beam-interlocks}, the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\color{red}
+
+Bring up everything into SB2, and select beamline C. Make sure everything is okay, so that you can run beam down the C line. Check that all the appropriate buttons are lit up, particularly the ``FC1 to Target'' button light should be on, and the FC1 ``Interlock'' light should be off. With the RF On, and FC1 Open, but NO CATHODE CURRENT, change PLOW below PSET and observe that the RF shuts off, and FC1 gets put in. Then observe the ``Interlock'' light is on next to FC1, and that the light on the ``FC1 to Tartget'' button turns off. Try opening FC1 and verify that it won't open. Turn the RF back on, with FC1 in. With the RF on, verify that you still cannot open FC1. Then change PLOW for the BMG back to the appropriate value and verify that the FC1 ``Interlock'' light goes away, the ``FC1 to Target'' button light turns on, and now you can open the FC1 with the RF On.
+
+Do this identical procedure for beamline B, in both test and treat mode. Also, do the same procedure with the bmg pset equal to zero, plow/phigh/pdiff in good positions, and the bmg off. Verify that beam can be run in this situation, and that changing pset away from zero (with the psbmg still off) will shut the beam off, or creating a particle beam interlock.
+
+\color{black}
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item BMG Current PSET  n.nn A
+
+\color{red}
+Set a value for PSET, and verify that it appears on the PS, in operations console and status display, and on PREAD (in operations console and status display).
+\color{black}
+
+ \item BMG Current PLOW  n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item BMG Current PHIGH n.nn A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item BMG Current PDiff n.n A
+
+\color{red}
+Already tested in Particle Beam Interlock section.
+\color{black}
+
+ \item BMG Current PSEN  n
+
+\color{red}
+Change PSEN from 1 to 10, and verify that the tuning knob sensivity has changed in the tuning module. Here, you should also check that you can drag BMG into the tuning module, and control the PSET parameter with the knob. Move the knob, and observe the pset value on status display.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item BMG Current MinLimit = 0 A
+
+\color{red}
+Set PSET to -1, and verify that the PV BMG:Curr:SetDevice only goes to 0.
+\color{black}
+
+ \item BMG Current MaxLimit = 100 A
+
+\color{red}
+Set PSET to 110, and verify that the PV BMG:Curr:SetDevice only goes to 100. Quickly return PSET to 0.
+\color{black}
+
+ \item BMG Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+With PSET=10, and PLOW set to 9.1, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then set PLOW to 8.9, and verify that everything goes back to normal.
+\color{black}
+
+ \item BMG Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+With PSET=10, and PHIGH set to 10.9, verify the appropriate changes in the PSET display in operations console (both tuning modules) and status display. Then change PHIGH to 11.1 and verify that everything goes back to normal.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item PSBMG Current PSET  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Current PLOW  n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Current PHIGH n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Current PDiff n.nn A
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Current PSEN  n
+
+\color{red}
+Tested in Analog Control Parameters.
+\color{black}
+
+ \item PSBMG Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The BMG power supply is commercial Kikusui DC supplies.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+For lines B and C, there exists special values of PSET, PLOW, PHIGH, PDIFF, and PSEN. These values are loaded once upon selection of a beamline. During tuning, these values will update to the values of PSET, PLOW, PHIGH, PDIFF, and PSEN set by the operator.
+
+To run beam down the C line, the PSBMG needs to be on, with no particle beam interlocks. To run beam down the B line, there needs to be no BMG particle beam interlocks and the PSBMG needs to be on, or the BMG Current PSET = 0.
+
+If line C is selected in Standby 2, the PSBMG is turned on. If line B is selected in Standby 2 with the BMG Current PSET not equal to zero, the PSBMG is turned on. If line A or Zero are selected in Standby 2, the PSBMG is turned off.
+
+\color{red}
+
+With no line selected, manually set the pset, phigh, plow, pdiff, and psen for line b (to something different then the current settings). Make sure that pset is non-zero. Then, in sb2 wit the bmf off, select beamline B in test mode. Verify that all the settings are loaded for line b. Also verify that the psbmg turns on. Next, try changing pset, phigh, plow, pdiff, and psen in the operations console, and verify that they update in the line b settings.
+
+Do the same thing in line b treat mode, and line c test mode.
+
+\color{black}
+
+
+
+
+
+
+\chapter{BMG Operations Console Testing}
+
+\paragraph{Draggable Objects}
+
+\begin{enumerate}
+ \item ``BMG'' label. - Will assign BMG output current parameter to Tuning Module or open BMG Display in Device Operations region.
+
+\color{red}
+Already tested in Analog Control Parameters.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+ \item BMG (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item BMG Initialize (Button is disabled if device is off or if RF in High Power mode)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item BMG (ON,OFF)
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item BMG Local
+
+\color{red}
+Already checked on State Monotors of System Control Testing.
+\color{black}
+
+ \item BMG Initializing - Flashing Yellow
+
+\color{red}
+Already checked on State Controls of System Control Testing.
+\color{black}
+
+ \item BMG Device Interlock - Red
+
+\color{red}
+Already checked on Device Interlocks Section of System Control Testing.
+\color{black}
+
+ \item BMG Interlock - Fuchsia - Communication, Hardware, or Watchdog Error
+
+\color{red}
+Already checked on Particle Beam Interlocks of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{BMG Steering Magnet (GCC) Device Operations}
+
+\paragraph{Title} \label{sect:cyc-op-interface-ops-terminal-device-ops-gcc-title}
+
+The title of the system will be BMG.  The color of the title bar will be teal.
+
+\paragraph{State Controls}
+
+\begin{enumerate}
+\item None
+\end{enumerate}
+
+\paragraph{State Indicators}
+
+\begin{enumerate}
+ \item None
+\end{enumerate}
+
+\paragraph{Analog Control Parameters}
+
+\begin{enumerate}
+ \item BMG Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\paragraph{Analog Display Parameters}
+
+\begin{enumerate}
+ \item BMG Current PSET   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PREAD  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PLOW   nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PHIGH  nn.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+
+
+
+
+\chapter{BMG Status Display Testing}
+
+The Beamline to FC1 system includes the xxxx.
+
+The Beamline FC1 to Target status screen pops up in the status terminal when the button "Beam Line FC1 to Target" is pushed on the CCC. The status screen is tabbed display such that the status of FC1-to-FC3, FC3-to-Target, Beamline B, and Beamline C may be displayed.  The switching magnet is shown for all 4 states, while the bending magnet is shown for only Beamline B and Beamline C.  When Beamline A is selected by the operator on the CCC, the tab for FC1-to-FC3 is selected. When Beamline B or C is selected, the corresponding tab in status dispay is selected. The user always has the ability to select the desired tab with the mouse pointer.
+
+\subsubsection{Title}\label{sect:cyc-op-interface-status-terminal-display-contents-beamline-target-title}
+
+The title of the display is "Beamline Control: FC1 to Target".  The color of the title bar is forest green.
+
+\subsection{State Monitors}
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A (ON,OFF)
+ \item X2A/X3A/Y2A/Y3A Local
+ \item X2A/X3A/Y2A/Y3A Initializing
+ \item X2A/X3A/Y2A/Y3A Shutting Down
+ \item SM23A +24 V Control Voltage Low
+ \item X2A Circuit Resistance out of Tolerance
+ \item X3A Circuit Resistance out of Tolerance
+ \item Y2A Circuit Resistance out of Tolerance
+ \item Y3A Circuit Resistance out of Tolerance
+ \item GCC (ON,OFF)
+ \item GCC Local
+ \item GCC Initializing
+ \item GCC Shutting Down
+ \item GCC +24 V Control Voltage Low
+ \item GCC Circuit Resistance out of Tolerance
+ \item BMG (ON,OFF)
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item BMG Local
+
+\color{red}
+Already checked on State Monitor section of System Control Testing.
+\color{black}
+
+ \item BMG Initializing
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item BMG Shutting Down
+
+\color{red}
+Already checked on State Controls section of System Control Testing.
+\color{black}
+
+ \item BMG +24 V Control Voltage Low
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Circuit Resistance out of Tolerance
+
+\color{red}
+Not in control system.
+\color{black}
+
+\item BMG Transistor Failure
+
+\color{red}
+I don't know of a way to get this indicator to come on.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Device Interlocks}
+
+Device Interlocks:
+(Occurence of these will turn off the corresponding device and prevent it from being turned back on until addressed)
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A Ground Fault - Reset Locally to Remove latch - No Remote Reset
+ \item X2A/Y2A Over Temperature - Reset to Remove latch
+ \item X3A/Y3A Over Temperature - Reset to Remove latch
+ \item SWM Magnet Cooling - Reset to Remove latch
+ \item GCC Ground Fault - Reset Locally to Remove latch - No Remote Reset
+ \item GCC Flow and Temperature - Reset to Remove latch
+ \item BMG Cooling Failure MPS - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item BMG Cooling Failure Magnet - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item BMG Power Failure - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+ \item BMG Overload - Reset to Remove latch
+
+\color{red}
+Already checked in Device section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsubsection{Particle Beam Interlocks}
+
+Particle Beam Interlocks:
+(Occurrence of interlock will prevent RF system from attempting to accelerate a particle beam)
+
+\begin{enumerate}
+ \item X2A/X3A/Y2A/Y3A Initializing - Non-latching
+ \item X2A/X3A/Y2A/Y3A Off - Non-latching
+ \item X2A/X3A/Y2A/Y3A Shutting Down - Non-latching
+ \item PSX2A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSX2A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSX2A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSX2A Communication Fault - Initialize to remove latch
+ \item PSY2A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSY2A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSY2A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSY2A Communication Fault - Initialize to remove latch
+ \item PSX3A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSX3A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSX3A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSX3A Communication Fault - Initialize to remove latch
+ \item PSY3A Current $PREAD \geq PHIGH$ - Non-latching
+ \item PSY3A Current $PREAD \leq PLOW$ - Non-latching
+ \item PSY3A Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item PSY3A Communication Fault - Initialize to remove latch
+ \item X2A/X3A/Y2A/Y3A Watchdog - Initialize to remove latch
+ \item GCC Initializing - Non-latching
+ \item GCC Off - Non-latching
+ \item GCC Shutting Down - Non-latching
+ \item GCC Current $PREAD \geq PHIGH$ - Non-latching
+ \item GCC Current $PREAD \leq PLOW$ - Non-latching
+ \item GCC Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+ \item GCC Communication Fault - Initialize to remove latch
+ \item GCC Watchdog - Initialize to remove latch
+ \item BMG Initializing - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Off - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Shutting Down - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Current $PREAD \geq PHIGH$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Current $PREAD \leq PLOW$ - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Current $\mid$PREAD-PSET$\mid$  $\geq$ PDiff - Non-latching
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Communication Fault - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Hardware Error - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+ \item BMG Watchdog - Initialize to remove latch
+
+\color{red}
+Already checked in Particle Beam Interlock section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Safety}
+
+Loss of control of the beamline magnets will result in loss of control of the particle beam if one is being produced.  The primary protection against this is that the control system monitors the output current of the control magnets.  If the output current is out of tolerance or in question (e.g., see section \ref{sect:cyc-equip-ctl-beamline-sm23a-state-monitors-beam-interlocks} for a description) the control system will shut off the particle beam as described in section \ref{sect:cyc-equip-ctl-safety-sys-control-beam-control}.  The back up for this is provided by the particle beam hardwired safety interlock system (HSIS) (section \ref{sect:cyc-equip-ctl-safety-sys-hsis-beam}) that monitors the particle beam position and beam losses described in section \ref{ch:cyc-equip-ctl-beam-diagnostics}.
+
+
+\subsection{Analog Control Parameters}
+
+\begin{enumerate}
+ \item PSX2A Current PSET  n.nn A
+ \item PSX2A Current PLOW  n.nn A
+ \item PSX2A Current PHIGH n.nn A
+ \item PSX2A Current PDiff n.n A
+ \item PSX2A Current PSEN  n
+ \item PSY2A Current PSET  n.nn A
+ \item PSY2A Current PLOW  n.nn A
+ \item PSY2A Current PHIGH n.nn A
+ \item PSY2A Current PDiff n.n A
+ \item PSY2A Current PSEN  n
+ \item PSX3A Current PSET  n.nn A
+ \item PSX3A Current PLOW  n.nn A
+ \item PSX3A Current PHIGH n.nn A
+ \item PSX3A Current PDiff n.n A
+ \item PSX3A Current PSEN  n
+ \item PSY3A Current PSET  n.nn A
+ \item PSY3A Current PLOW  n.nn A
+ \item PSY3A Current PHIGH n.nn A
+ \item PSY3A Current PDiff n.n A
+ \item PSY3A Current PSEN  n
+ \item GCC Current PSET  n.nn A
+ \item GCC Current PLOW  n.nn A
+ \item GCC Current PHIGH n.nn A
+ \item GCC Current PDiff n.n A
+ \item GCC Current PSEN  n
+ \item BMG Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PDiff n.n A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+
+\subsection{Parameter Limits}
+
+\begin{enumerate}
+ \item PSX2A Current MinLimit = -1.3 A
+ \item PSX2A Current MaxLimit = 1.3 A
+ \item PSX2A Current PLOWWarn = PLOW + 0.5 A
+ \item PSX2A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSY2A Current MinLimit = -1.3 A
+ \item PSY2A Current MaxLimit = 1.3 A
+ \item PSY2A Current PLOWWarn = PLOW + 0.5 A
+ \item PSY2A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSX3A Current MinLimit = -1.3 A
+ \item PSX3A Current MaxLimit = 1.3 A
+ \item PSX3A Current PLOWWarn = PLOW + 0.5 A
+ \item PSX3A Current PHIGHWarn = PHIGH - 0.5 A
+ \item PSY3A Current MinLimit = -1.3 A
+ \item PSY3A Current MaxLimit = 1.3 A
+ \item PSY3A Current PLOWWarn = PLOW + 0.5 A
+ \item PSY3A Current PHIGHWarn = PHIGH - 0.5 A
+ \item GCC Current MinLimit = -1.3 A
+ \item GCC Current MaxLimit = 1.3 A
+ \item GCC Current PLOWWarn = PLOW + 0.5 A
+ \item GCC Current PHIGHWarn = PHIGH - 0.5 A
+ \item BMG Current MinLimit = 0.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item BMG Current MaxLimit = 100.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item BMG Current PLOWWarn = PLOW + 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+ \item BMG Current PHIGHWarn = PHIGH - 1.0 A
+
+\color{red}
+Already checked in Parameter Limits section of System Control Testing.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Analog Display Parameters}
+
+\begin{enumerate}
+ \item PSX2A Current PSET  n.nn A
+ \item PSX2A Current PLOW  n.nn A
+ \item PSX2A Current PHIGH n.nn A
+ \item PSX2A Current PDiff n.nn A
+ \item PSX2A Current PSEN  n
+ \item PSX2A Voltage PREAD n.nn V
+ \item X2A Resistance PREAD n.n $\Omega$
+ \item X2A Resistance PLOW n.n $\Omega$
+ \item X2A Resistance PHIGH n.n $\Omega$
+ \item PSX3A Current PSET  n.nn A
+ \item PSX3A Current PLOW  n.nn A
+ \item PSX3A Current PHIGH n.nn A
+ \item PSX3A Current PDiff n.nn A
+ \item PSX3A Current PSEN  n
+ \item PSX3A Voltage PREAD n.nn V
+ \item X3A Resistance PREAD n.n $\Omega$
+ \item X3A Resistance PLOW n.n $\Omega$
+ \item X3A Resistance PHIGH n.n $\Omega$
+ \item PSY2A Current PSET  n.nn A
+ \item PSY2A Current PLOW  n.nn A
+ \item PSY2A Current PHIGH n.nn A
+ \item PSY2A Current PDiff n.nn A
+ \item PSY2A Current PSEN  n
+ \item PSY2A Voltage PREAD n.nn V
+ \item Y2A Resistance PREAD n.n $\Omega$
+ \item Y2A Resistance PLOW n.n $\Omega$
+ \item Y2A Resistance PHIGH n.n $\Omega$
+ \item PSY3A Current PSET  n.nn A
+ \item PSY3A Current PLOW  n.nn A
+ \item PSY3A Current PHIGH n.nn A
+ \item PSY3A Current PDiff n.nn A
+ \item PSY3A Current PSEN  n
+ \item PSY3A Voltage PREAD n.nn V
+ \item Y3A Resistance PREAD n.n $\Omega$
+ \item Y3A Resistance PLOW n.n $\Omega$
+ \item Y3A Resistance PHIGH n.n $\Omega$
+ \item GCC Current PSET  n.nn A
+ \item GCC Current PLOW  n.nn A
+ \item GCC Current PHIGH n.nn A
+ \item GCC Current PDiff n.nn A
+ \item GCC Current PSEN  n
+ \item GCC Voltage PREAD n.nn V
+ \item GCC Resistance PREAD n.n $\Omega$
+ \item GCC Resistance PLOW n.n $\Omega$
+ \item GCC Resistance PHIGH n.n $\Omega$
+ \item BMG Current PSET  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PLOW  n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PHIGH n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PDiff n.nn A
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Current PSEN  n
+
+\color{red}
+Already checked on Analog Control Parameters section of System Control Testing.
+\color{black}
+
+ \item BMG Voltage PREAD n.nn V
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PREAD n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PLOW n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+ \item BMG Resistance PHIGH n.n $\Omega$
+
+\color{red}
+Not in control system.
+\color{black}
+
+\end{enumerate}
+
+\subsection{Implementation Notes}
+
+The SM23A Steering Magnets and Gantry Correction Coil power supplies are commercial Kikusui DC supplies.  Digital control and monitoring of this power supply is via the MOD 1 PLC.  Analog control and monitoring are done by the control system using by way of Ethernet/GPIB via a Agilent E5810A GPIB gateway.
+
+\end{document}

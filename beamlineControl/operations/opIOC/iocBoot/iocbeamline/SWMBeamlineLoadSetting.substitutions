@@ -1,0 +1,19 @@
+# Load the database to monitor what line is selected and update the SWM values.
+ file "db/SWM/SWMBeamlineLoadSetting.template" { pattern
+{SubSys,Param,Line,PVTreat,PVTest}
+{"SWM","Set","LineA","CYC:LineASelectedTreatMode:Status","CYC:LineASelectedTestMode:Status"}
+{"SWM","Set","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"SWM","Set","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"SWM","PHIGH","LineA","CYC:LineASelectedTreatMode:Status","CYC:LineASelectedTestMode:Status"}
+{"SWM","PHIGH","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"SWM","PHIGH","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"SWM","PLOW","LineA","CYC:LineASelectedTreatMode:Status","CYC:LineASelectedTestMode:Status"}
+{"SWM","PLOW","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"SWM","PLOW","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"SWM","PDIFF","LineA","CYC:LineASelectedTreatMode:Status","CYC:LineASelectedTestMode:Status"}
+{"SWM","PDIFF","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"SWM","PDIFF","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+{"SWM","PSENS","LineA","CYC:LineASelectedTreatMode:Status","CYC:LineASelectedTestMode:Status"}
+{"SWM","PSENS","LineB","CYC:LineBSelectedTreatMode:Status","CYC:LineBSelectedTestMode:Status"}
+{"SWM","PSENS","LineC","CYC:LineCSelectedTestMode:Status","CYC:LineCSelectedTestMode:Status"}
+}
